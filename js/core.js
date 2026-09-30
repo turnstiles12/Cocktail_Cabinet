@@ -1,5 +1,6 @@
 /* Cocktail Cabinet — shared core: math, RNG, input, sound, storage.
-   Every game registers itself with CC.register({...}); main.js runs the shell. */
+   Every game registers itself with CC.register({...}); main.js runs the shell. 
+   */
 (() => {
   'use strict';
   const CC = (window.CC = { games: [], muted: false });
