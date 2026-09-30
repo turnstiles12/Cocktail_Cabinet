@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cocktail Cabinet — seven games, either side</title>
+<meta name="description" content="Seven arcade games on one cocktail cabinet. Play either side against the computer, or another person in a second browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Chivo:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- MENU -->
+  <section id="menu" class="screen">
+    <header class="rail">
+      <h1 class="marquee"><span>Cocktail</span><span>Cabinet</span></h1>
+      <p class="tagline">Seven games under one glass top. Sit on either side — the computer takes the other.</p>
+    </header>
+    <div class="tabletop">
+      <div id="deck" class="deck" role="list"></div>
+    </div>
+    <footer class="foot">
+      <button id="muteBtn" class="chip" type="button" aria-pressed="false">Sound on</button>
+      <span class="foot-note">Keyboard: P pauses, R restarts, Esc returns to the table.</span>
+    </footer>
+  </section>
+
+  <!-- GAME -->
+  <section id="game" class="screen" hidden>
+    <div class="topbar">
+      <button id="backBtn" class="chip" type="button">Back to the table</button>
+      <h2 id="gameTitle" class="game-title"></h2>
+      <div class="topbar-actions">
+        <button id="pauseBtn" class="chip" type="button">Pause</button>
+        <button id="restartBtn" class="chip" type="button">Restart</button>
+      </div>
+    </div>
+
+    <div id="roles" class="roles" role="radiogroup" aria-label="Which side you play"></div>
+
+    <div class="plates">
+      <div class="plate left"><span id="hudL"></span></div>
+      <div class="plate mid"><span id="hudC"></span></div>
+      <div class="plate right"><span id="hudR"></span></div>
+    </div>
+
+    <div class="bezel" id="bezel">
+      <canvas id="screen" width="800" height="600" tabindex="0" aria-label="Game screen"></canvas>
+      <div id="panel" class="panel" hidden></div>
+      <div id="banner" class="banner" hidden>
+        <div class="banner-title" id="bannerTitle"></div>
+        <div class="banner-sub" id="bannerSub"></div>
+      </div>
+    </div>
+
+    <p id="help" class="help"></p>
+  </section>
+
+</div>
+
+<script src="js/vendor/peerjs.min.js" defer></script>
+<script src="js/core.js" defer></script>
+<script src="js/net.js" defer></script>
+<script src="js/games/snake.js" defer></script>
+<script src="js/games/breakout.js" defer></script>
+<script src="js/games/splat.js" defer></script>
+<script src="js/games/asteroids.js" defer></script>
+<script src="js/games/missile.js" defer></script>
+<script src="js/games/imitation.js" defer></script>
+<script src="js/games/go.js" defer></script>
+<script src="js/main.js" defer></script>
+</body>
+</html>
