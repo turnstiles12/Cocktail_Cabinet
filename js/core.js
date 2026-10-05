@@ -1,9 +1,41 @@
-/* Cocktail Cabinet — shared core: math, RNG, input, sound, storage.
-   Every game registers itself with CC.register({...}); main.js runs the shell. 
-   */
+/**
+ * Cocktail Cabinet: shared core.
+ *
+ * @file Shared toolbox used by every game and by the shell. It creates the single global
+ * object {@code window.CC} and fills it with: small math helpers (clamp, lerp, random numbers,
+ * a seedable random generator), best-effort saved settings, sound effects (beep and boom),
+ * keyboard and mouse input state, pointer binding for the drawing canvas, and tiny drawing
+ * and DOM helpers.
+ *
+ * Every game registers itself with {@link CC.register}; {@code main.js} then runs whichever
+ * game the visitor picks. This file has no game logic and no network code.
+ *
+ * Load order: this file must be loaded first (after the vendored PeerJS library), before
+ * {@code net.js}, the game files and {@code main.js}.
+ *
+ * @module core
+ * @see js/main.js
+ * @see js/net.js
+ */
 (() => {
   'use strict';
   const CC = (window.CC = { games: [], muted: false });
+  /**
+   * What a game hands to {@link CC.register}.
+   * @typedef {Object} GameDescriptor
+   * @property {string} id        short name used in the page address, for example "snake"
+   * @property {string} title     name shown on the card and above the game
+   * @property {string} blurb     one-line description for the menu card
+   * @property {string} icon      inline SVG markup for the card
+   * @property {{w:number,h:number}} [size]  drawing-sheet size, default 800 by 600
+   * @property {'canvas'|'panel'|'split'} [layout]  where the game draws; default "canvas"
+   * @property {boolean} [noPause]       true if the game has no pause
+   * @property {boolean} [noRestartKey]  true if the R key must not restart the game
+   * @property {Array<{id:string,label:string,help:string}>} roles  the sides on offer
+   * @property {function(Object):{update?:Function,draw?:Function,destroy?:Function}} create
+   *           starts the game on the chosen side, given the api kit from main.js
+   */
+  /** Adds a game to the menu. @param {GameDescriptor} g */
   CC.register = (g) => CC.games.push(g);
 
   // ---------- math ----------

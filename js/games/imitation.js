@@ -1,8 +1,24 @@
-/* IMITATION — a two-minute chat, then a verdict: was the other side a person or the machine?
-   Both players are judged. Pick a disguise: be yourself, or play the AI.
-   Quick match looks for a real person in another browser first and falls back to the house AI;
-   the search looks the same either way, so the opponent is never given away by the lobby.
-   The house AI is a local, rule-based chatter (no API key, nothing leaves the browser). */
+/**
+ * Game: Imitation.
+ *
+ * @file A two-minute chat followed by a verdict: was the other side a person or the machine?
+ * Both sides are judged. Choose a disguise (be yourself, or play the AI). You score 1 for a
+ * correct call and 1 if the other side believes your disguise.
+ *
+ * Opponents: a person in another browser (quick match or a four-letter room code) or the
+ * house AI. Quick match always shows a search and a "Player found" step.
+ *
+ * The house AI is a local, rule-based chatter with a persona, human-like typing delays and
+ * typos; at low levels it sometimes slips into over-polished phrasing. It also judges the
+ * human from typing speed, phrasing, message length and hard-sum answers. It is plain code:
+ * it makes no network calls and uses no API key.
+ *
+ * Test hook: {@code CC._imitation} exposes {@code HouseAI} and {@code judge}.
+ *
+ * @module games/imitation
+ * @requires js/core.js
+ * @requires js/net.js
+ */
 (() => {
   'use strict';
   const CC = window.CC;

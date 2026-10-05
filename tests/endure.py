@@ -1,3 +1,11 @@
+"""Endurance test.
+
+Runs the six watch-mode games in separate tabs for about a minute while a lone Imitation
+quick match searches, printing score plates every 10 seconds. Checks for page errors and
+that a quick match with nobody else searching falls back to the house AI.
+
+Run: CHROME=/path/to/chrome python3 tests/endure.py   (CHROME is optional)
+"""
 import os
 LAUNCH = {'executable_path': os.environ['CHROME']} if os.environ.get('CHROME') else {}
 import asyncio, subprocess, time

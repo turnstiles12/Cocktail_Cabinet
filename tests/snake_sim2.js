@@ -1,3 +1,14 @@
+/**
+ * Test: Snake apple-placer against the snake.
+ *
+ * @file Simulates matches where a trap-hunting apple placer plays the computer snake, for
+ * several rot-allowance formulas, and prints how often the placer wins. Used to choose the
+ * rot allowance so the apple side can win roughly one match in three.
+ *
+ * Run: {@code node tests/snake_sim2.js}
+ *
+ * @see js/games/snake.js
+ */
 global.window = global; global.localStorage = {getItem(){return null}, setItem(){}}; global.addEventListener = ()=>{};
 let rots=0, crashes=0; let SLACK;
 require('../js/core.js'); require('../js/games/snake.js');

@@ -1,3 +1,12 @@
+"""Two-tab test.
+
+Opens two tabs in one browser and checks that (1) Imitation quick match pairs them, they
+exchange chat lines, both vote and both see the reveal, and (2) a Go room can be opened
+and joined, with a move on one tab appearing on the other. Uses the same-browser channel,
+not the internet path.
+
+Run: CHROME=/path/to/chrome python3 tests/twotab.py   (CHROME is optional)
+"""
 import os
 LAUNCH = {'executable_path': os.environ['CHROME']} if os.environ.get('CHROME') else {}
 import asyncio, subprocess, time

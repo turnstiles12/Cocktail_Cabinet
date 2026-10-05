@@ -1,3 +1,10 @@
+# netlify.toml
+#
+# @file  Deploy settings for Netlify. The site is static: there is nothing to build, so
+#        the repository root is published as it is. Also adds two small safety headers
+#        and a five-minute cache time for the scripts. Every push to the main branch
+#        deploys automatically once the repository is connected.
+#
 # Static site: nothing to build, publish the repository root.
 [build]
   publish = "."

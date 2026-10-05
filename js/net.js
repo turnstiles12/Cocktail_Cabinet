@@ -1,7 +1,28 @@
-/* Cocktail Cabinet — browser-to-browser links. No server of our own:
-   - PeerJS (WebRTC) connects two different browsers; its free public broker only introduces the peers.
-   - BroadcastChannel connects two tabs of the same browser (handy for testing, works offline).
-   A link looks the same either way: link.send(obj), link.onMessage(fn), link.onClose(fn), link.close(). */
+/**
+ * Cocktail Cabinet: browser-to-browser links.
+ *
+ * @file Connects two players with no server of our own.
+ *  - PeerJS (WebRTC) links two different browsers. Its free public broker only introduces
+ *    the two peers; after that, messages travel directly between them.
+ *  - BroadcastChannel links two tabs of the same browser. It works offline and is what the
+ *    automated two-tab tests use.
+ *
+ * Both kinds are wrapped in the same link object: {@code send(obj)}, {@code onMessage(fn)},
+ * {@code onClose(fn)} and {@code close()}. A heartbeat ping every 3 seconds drops a link after
+ * 15 seconds of silence.
+ *
+ * Public API, exposed as {@code CC.net}: {@code quickMatch(game, ms)} (look for anyone else
+ * searching the same game), {@code hostRoom(game, code)} and {@code joinRoom(game, code)}
+ * (four-letter private rooms), {@code roomCode()} and {@code hasPeer()}.
+ *
+ * Used by the Imitation and Go games for their online modes.
+ *
+ * @module net
+ * @requires js/core.js
+ * @requires js/vendor/peerjs.min.js
+ * @see js/games/imitation.js
+ * @see js/games/go.js
+ */
 (() => {
   'use strict';
   const CC = window.CC;

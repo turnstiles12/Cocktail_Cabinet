@@ -1,3 +1,15 @@
+/**
+ * Test: Splat bird survival.
+ *
+ * @file Measures how many columns the computer bird clears per death, for skill 0 to 1 at
+ * three column speeds, against the cruelest column builder the rules allow (always the
+ * farthest reachable gap up or down). Used to tune the bird so it is neither perfect nor
+ * hopeless.
+ *
+ * Run: {@code node tests/splat_grid.js}
+ *
+ * @see js/games/splat.js
+ */
 global.window = global; global.localStorage = {getItem(){return null}, setItem(){}}; global.addEventListener = ()=>{};
 require('../js/core.js'); require('../js/games/splat.js');
 const {birdPlan, hitsColumn, maxDeltaFor, clampGap, consts:K} = CC._splat;

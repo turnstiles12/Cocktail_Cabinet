@@ -1,3 +1,15 @@
+/**
+ * Test: Go rules and strength.
+ *
+ * @file Checks the Go engine and computer player in plain Node (no browser). Asserts that a
+ * surrounded stone is captured, that a suicide move is illegal, and that a one-stone capture
+ * sets the ko square. Then plays four 9x9 games of the 150-playout computer against a random
+ * player and prints how many it won, and times 3,000 playouts on an empty board.
+ *
+ * Run: {@code node tests/go_test.js}
+ *
+ * @see js/games/go.js
+ */
 global.window = global; global.localStorage = {getItem(){return null}, setItem(){}}; global.addEventListener = ()=>{};
 global.performance = require('perf_hooks').performance;
 require('../js/core.js'); require('../js/games/go.js');

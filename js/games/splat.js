@@ -1,7 +1,24 @@
-/* SPLAT — flap between the columns.
-   flap    : you flap; the computer lays out the columns (tighter and wilder as you go).
-   columns : you lay out the columns; the computer flaps through them using the same physics and input you have.
-   Every gap you place is clamped to a band the bird can physically reach, so there are no impossible columns. */
+/**
+ * Game: Splat.
+ *
+ * @file Flap a bird between columns, playable from either side.
+ *  - flap : you flap; the computer lays out the columns (smaller gaps, wider swings,
+ *    faster scroll as you go).
+ *  - columns : you place each gap with the mouse; the computer flaps using the same gravity
+ *    and one-button input. Every gap you place is clamped to a band the bird can physically
+ *    reach, so impossible columns cannot be built. Splat the bird 4 times to win; it wins
+ *    at 40 columns.
+ *  - watch : the computer plays both sides.
+ *
+ * The bird plans by simulating flap / no-flap futures with the real physics. Skill controls
+ * how far ahead it sees and how often it re-plans, and is capped below perfect when a human
+ * is building.
+ *
+ * Test hook: {@code CC._splat} exposes the planner and constants for {@code tests/splat_grid.js}.
+ *
+ * @module games/splat
+ * @requires js/core.js
+ */
 (() => {
   'use strict';
   const CC = window.CC;

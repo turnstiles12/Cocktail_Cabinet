@@ -1,3 +1,11 @@
+"""Browser smoke test.
+
+Starts a local web server, opens every game on every side in headless Chromium, clicks
+and presses keys, waits, then prints each game's score plates and banner and any page
+errors. Saves screenshots to tests/shots/.
+
+Run: CHROME=/path/to/chrome python3 tests/smoke.py   (CHROME is optional)
+"""
 import os
 LAUNCH = {'executable_path': os.environ['CHROME']} if os.environ.get('CHROME') else {}
 import asyncio, subprocess, time

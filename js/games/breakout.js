@@ -1,6 +1,20 @@
-/* BREAKOUT — head to head.
-   Each side has a paddle and a shield wall in front of its goal line; a brick field sits in the middle.
-   Knock holes in the other shield and put the ball through. Sit at the bottom or the top. */
+/**
+ * Game: Breakout (head to head).
+ *
+ * @file Two-player Breakout. Each side has a paddle and a single row of shield bricks in
+ * front of its goal; a brick field sits in the middle and one ball bounces between them.
+ * Break through the other shield and put the ball past their paddle to score. First to 3
+ * goals wins a set; winning a set as the human raises the level and sharpens the computer.
+ *
+ * Sides: sit at the bottom, sit at the top, or watch computer against computer.
+ *
+ * The computer paddle predicts where the ball will cross its row (including wall bounces),
+ * with reaction delay and aim error that shrink as skill rises, and from mid skill aims its
+ * returns at holes in the human's shield.
+ *
+ * @module games/breakout
+ * @requires js/core.js
+ */
 (() => {
   'use strict';
   const CC = window.CC;

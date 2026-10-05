@@ -1,4 +1,21 @@
-/* Cocktail Cabinet — shell: the table (menu), routing, role picker, fixed-step loop. */
+/**
+ * Cocktail Cabinet: shell.
+ *
+ * @file The program that runs the cabinet. It builds the menu of game cards from the games
+ * that registered themselves, reads the page address (the part after #) to decide which game
+ * to open, builds the "which side do you play" buttons, starts a game with a small API kit,
+ * and drives it from a fixed 60-updates-per-second loop. It also handles pause, restart, the
+ * back button and keyboard shortcuts (P, R, Esc).
+ *
+ * Games never touch the page directly. They receive an {@code api} object holding the canvas,
+ * the panel, the input state and helpers to set the score plates and show banners.
+ *
+ * Load order: this file must be loaded last, after every game has called {@code CC.register}.
+ *
+ * @module main
+ * @requires js/core.js
+ * @see js/games
+ */
 (() => {
   'use strict';
   const CC = window.CC;

@@ -1,3 +1,16 @@
+/**
+ * Test: Asteroids and Missile Command flips.
+ *
+ * @file Runs the real update loops of Asteroids (you send rocks) and Missile Command (you
+ * attack) headlessly with a crude scripted human, five runs each, and prints the final
+ * score plates. Shows how the computer side holds up against a naive player. Results vary
+ * run to run because of random numbers.
+ *
+ * Run: {@code node tests/flip_sim.js}
+ *
+ * @see js/games/asteroids.js
+ * @see js/games/missile.js
+ */
 // Headless: runs a game's real update() with a scripted "human" to measure how the computer side holds up.
 global.window = global; global.localStorage = { getItem() { return null; }, setItem() {} }; global.addEventListener = () => {};
 global.setTimeout = (f) => 0;

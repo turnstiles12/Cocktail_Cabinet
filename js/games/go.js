@@ -1,7 +1,24 @@
-/* GO — 9×9 (or 13×13), area scoring, komi 6.5, simple ko.
-   Play black or white against the computer, or a person in another browser.
-   The computer is a Monte Carlo player: it plays out thousands of random games and keeps the move that wins most.
-   It thinks longer after each of your wins. */
+/**
+ * Game: Go.
+ *
+ * @file Go on 9 by 9 or 13 by 13, with area scoring, komi 6.5 and a simple ko rule.
+ * Play black or white against the computer, play a person in another browser (quick match
+ * or room code), or watch the computer play itself.
+ *
+ * Contains a rules engine ({@code Board}: captures, suicide, ko, area scoring), the computer
+ * player ({@code Thinker}: Monte Carlo search with thousands of random playouts per move,
+ * all-moves-as-first statistics and a small atari heuristic), and a dead-stone estimator that
+ * uses a seeded random generator so both browsers of an online game agree on the result.
+ *
+ * Playouts per move rise with the level, which rises each time the human wins.
+ *
+ * Test hook: {@code CC._go} exposes {@code Board}, {@code Thinker}, {@code playout} and
+ * {@code deadStones}.
+ *
+ * @module games/go
+ * @requires js/core.js
+ * @requires js/net.js
+ */
 (() => {
   'use strict';
   const CC = window.CC;

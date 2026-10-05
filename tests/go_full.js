@@ -1,3 +1,14 @@
+/**
+ * Test: Go computer against computer.
+ *
+ * @file Plays one whole 9x9 game of the computer against itself using the same pass logic
+ * as the real game, then prints the final board (lower case marks stones judged dead), the
+ * number of moves, the score difference and the time taken.
+ *
+ * Run: {@code node tests/go_full.js}
+ *
+ * @see js/games/go.js
+ */
 global.window = global; global.localStorage = {getItem(){return null}, setItem(){}}; global.addEventListener = ()=>{};
 global.performance = require('perf_hooks').performance;
 require('../js/core.js'); require('../js/games/go.js');

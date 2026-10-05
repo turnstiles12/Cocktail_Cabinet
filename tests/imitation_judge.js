@@ -1,3 +1,14 @@
+/**
+ * Test: Imitation judge and chatter.
+ *
+ * @file Prints how often the house AI judge calls a casual texter "human" and a fast, tidy
+ * writer "machine" at levels 1, 3, 5 and 8, then shows sample replies from the house AI to
+ * eight prompts.
+ *
+ * Run: {@code node tests/imitation_judge.js}
+ *
+ * @see js/games/imitation.js
+ */
 // How often does the house AI's judge call a casual typist "human" and a polished fast typist "ai", by level?
 global.window = global; global.localStorage = { getItem() { return null; }, setItem() {} }; global.addEventListener = () => {};
 require('../js/core.js'); require('../js/games/imitation.js');

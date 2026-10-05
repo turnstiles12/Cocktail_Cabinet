@@ -1,7 +1,20 @@
-/* ASTEROIDS
-   pilot  : you fly; the computer sends waves.
-   sender : the computer flies with the same turn rate, thrust and gun you get; you fling the asteroids.
-   watch  : computer on both sides. */
+/**
+ * Game: Asteroids.
+ *
+ * @file Asteroids on a wrapping screen, playable from either side.
+ *  - pilot : you fly (turn, thrust, fire); the computer sends the waves.
+ *  - sender : the computer flies with the same turn rate, thrust, bullet limit and gun
+ *    cooldown you get; you drag on the screen to fling asteroids (not inside the ring
+ *    around the ship). Destroy 3 ships to win; the pilot wins by clearing wave 8.
+ *  - watch : the computer plays both sides.
+ *
+ * The computer pilot computes intercept angles, estimates closest approach for every rock,
+ * dodges when one is about to hit, and otherwise shoots the cheapest target. Aim noise and
+ * reaction time improve with each wave.
+ *
+ * @module games/asteroids
+ * @requires js/core.js
+ */
 (() => {
   'use strict';
   const CC = window.CC;

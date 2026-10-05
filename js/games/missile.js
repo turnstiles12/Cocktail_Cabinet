@@ -1,8 +1,20 @@
-/* MISSILE COMMAND
-   defend : you fire the interceptors; the computer attacks.
-   attack : the flip — you command the attack (pick targets, split warheads); the computer runs the three batteries
-            with the same interceptor speed, blast size and ammo you get when defending.
-   watch  : computer on both sides. */
+/**
+ * Game: Missile Command.
+ *
+ * @file Defend six cities from falling missiles, or lead the attack.
+ *  - defend : you fire interceptors from three batteries; the computer attacks in waves.
+ *  - attack : the designed flip. You pick targets and can break high warheads into three
+ *    (limited per wave). The computer runs the three batteries with the same interceptor
+ *    speed, blast size and ammunition a human defender gets. Flatten all six cities to win;
+ *    the defense wins by surviving wave 7.
+ *  - watch : the computer plays both sides.
+ *
+ * The computer defense solves for an intercept point per warhead, skips warheads already
+ * covered by a blast, and at higher skill ignores warheads aimed at rubble.
+ *
+ * @module games/missile
+ * @requires js/core.js
+ */
 (() => {
   'use strict';
   const CC = window.CC;

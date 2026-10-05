@@ -1,3 +1,16 @@
+/**
+ * Cocktail Cabinet: stylesheet.
+ *
+ * @file All the styling for the single page: the walnut-and-brass cabinet look, the menu
+ * cards, the game screen frame, name plates, banner, role buttons, and the chat and Go side
+ * panel. Colours and fonts are CSS variables at the top of the file.
+ *
+ * Layout note: the game canvas box is sized from {@code js/main.js} so its shape always
+ * matches the picture drawn on it; the CSS only says to fill the available width.
+ *
+ * @see index.html
+ * @see js/main.js
+ */
 :root {
   --walnut: #3b2417;
   --walnut-dark: #24150d;

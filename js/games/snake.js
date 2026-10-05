@@ -1,7 +1,23 @@
-/* SNAKE
-   steer  : you steer, the computer places apples (it picks harder spots as you level up).
-   apples : you place apples, the computer steers (it learns caution as it levels up).
-   watch  : computer on both sides. */
+/**
+ * Game: Snake.
+ *
+ * @file Snake on a 32 by 24 grid, playable from either side.
+ *  - steer : you steer the snake; the computer places each apple, choosing farther and
+ *    trickier spots (against walls, hugging the body) as the level rises.
+ *  - apples : you place the apples; the computer steers. Each apple grows the snake by 3.
+ *    Apples rot if the snake dawdles (+1 for you); crashes score +2. First to 6 wins; the
+ *    snake wins at 30 apples.
+ *  - watch : the computer plays both sides.
+ *
+ * Computer steering uses a time-aware breadth-first search to the apple, checks that it can
+ * still reach its own tail after eating (avoiding traps), and falls back to survival moves.
+ * Skill rises with level and never exceeds what the rules allow a human.
+ *
+ * Test hook: {@code CC._snake} exposes the planning helpers for the scripts in {@code tests/}.
+ *
+ * @module games/snake
+ * @requires js/core.js
+ */
 (() => {
   'use strict';
   const CC = window.CC;

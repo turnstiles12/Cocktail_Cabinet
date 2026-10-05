@@ -1,4 +1,18 @@
 <!doctype html>
+<!--
+  Cocktail Cabinet: the single page.
+
+  @file  The only HTML page. It holds two screens that main.js swaps between:
+         - #menu : the title and a shelf where the seven game cards are built
+         - #game : back/pause/restart buttons, the "which side" buttons, three score plates,
+                   the frame with the drawing canvas, a side panel (chat, Go) and a banner
+  Scripts load in this order: vendored PeerJS, js/core.js, js/net.js, the seven games in
+  js/games/, then js/main.js last (it needs every game registered first).
+  There is no build step and no server code: this folder is published as-is.
+
+  @see css/style.css
+  @see js/main.js
+-->
 <html lang="en">
 <head>
 <meta charset="utf-8">
