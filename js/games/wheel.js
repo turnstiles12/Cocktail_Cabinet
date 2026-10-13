@@ -49,6 +49,9 @@
 
   // ---------- spikes ----------
   const RISE = 0.12, RETRACT = 0.25, SPIKE_LEN = 52, SPIKE_BASE_R = R + 40;
+  // The ball smashes objects only while it is near the bottom of its circle (within about 0.62 rad of straight down).
+  // Spikes may not be planted in or near that arc, or they could cut the wheel off from the belt.
+  const BELT_KEEPOUT = 0.95;                                      // rad either side of straight down where no spike may go
 
   // ---------- waves ----------
   const WAVE_SECONDS = 25, WAVES_TO_WIN = 6;
@@ -170,6 +173,7 @@
         return false;
       }
       function addSpike(a) {
+        if (Math.abs(Math.atan2(Math.sin(a), Math.cos(a))) < BELT_KEEPOUT) return 'Too close to the belt';
         const live = st.spikes.filter((s) => st.T < s.upAt + RISE + s.hold + RETRACT);
         if (live.length >= 3) return 'Three spikes are already out';
         const sp = { a, upAt: st.T + warnTime(), hold: holdTime() };

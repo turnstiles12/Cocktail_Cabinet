@@ -236,41 +236,47 @@
           else api.hud(`${role === 'watch' ? 'Snake' : 'You'} ${st.eaten * 10}`, `Level ${level()}`, `Lives ${Math.max(0, st.lives)}`);
         },
         draw(ctx) {
-          ctx.fillStyle = '#081009'; ctx.fillRect(0, 0, C * S, R * S);
-          ctx.strokeStyle = 'rgba(126,224,122,0.06)'; ctx.lineWidth = 1;
+          // board: a checkerboard of two clearly different tones, bright grid lines and a bold border
+          ctx.fillStyle = '#f4f8ec'; ctx.fillRect(0, 0, C * S, R * S);
+          ctx.fillStyle = '#c9e2b0';
+          for (let y = 0; y < R; y++) for (let x = (y & 1); x < C; x += 2) ctx.fillRect(x * S, y * S, S, S);
+          ctx.strokeStyle = 'rgba(20,70,20,0.40)'; ctx.lineWidth = 1;
           for (let x = 0; x <= C; x++) { ctx.beginPath(); ctx.moveTo(x * S + 0.5, 0); ctx.lineTo(x * S + 0.5, R * S); ctx.stroke(); }
           for (let y = 0; y <= R; y++) { ctx.beginPath(); ctx.moveTo(0, y * S + 0.5); ctx.lineTo(C * S, y * S + 0.5); ctx.stroke(); }
+          ctx.strokeStyle = '#ffd24a'; ctx.lineWidth = 6; ctx.strokeRect(3, 3, C * S - 6, R * S - 6);
           // apple
           if (st.apple) {
             const ax = st.apple.x * S + S / 2, ay = st.apple.y * S + S / 2;
-            CC.glow(ctx, '#e0405a', 14); ctx.fillStyle = '#e0405a'; ctx.beginPath(); ctx.arc(ax, ay + 1, S * 0.36, 0, Math.PI * 2); ctx.fill(); CC.noGlow(ctx);
-            ctx.fillStyle = '#7ee07a'; ctx.fillRect(ax, ay - S * 0.45, 3, 6);
+            CC.glow(ctx, '#e0102a', 10); ctx.fillStyle = '#e0102a'; ctx.beginPath(); ctx.arc(ax, ay + 1, S * 0.36, 0, Math.PI * 2); ctx.fill(); CC.noGlow(ctx);
+            ctx.strokeStyle = '#3a0008'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.fillStyle = '#0a6b1e'; ctx.fillRect(ax, ay - S * 0.45, 3, 6);
             if (humanApples) {
               const left = 1 - st.appleTicks / st.appleLife;
-              ctx.strokeStyle = left < 0.3 ? '#ff6b6b' : '#ffb347'; ctx.lineWidth = 3;
+              ctx.strokeStyle = left < 0.3 ? '#d00020' : '#d9480f'; ctx.lineWidth = 3;
               ctx.beginPath(); ctx.arc(ax, ay, S * 0.62, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2); ctx.stroke();
             }
           }
           // placement cursor
           if (humanApples && !st.apple && !st.over && api.input.mouse.inside) {
             const x = Math.floor(api.input.mouse.x / S), y = Math.floor(api.input.mouse.y / S);
-            ctx.strokeStyle = '#ffb347'; ctx.lineWidth = 2; ctx.strokeRect(x * S + 2, y * S + 2, S - 4, S - 4);
-            CC.text(ctx, `Place an apple · ${Math.max(0, Math.ceil(st.placeTimer))}`, C * S / 2, 20, { size: 16, color: '#ffb347' });
+            ctx.strokeStyle = '#d9480f'; ctx.lineWidth = 3; ctx.strokeRect(x * S + 2, y * S + 2, S - 4, S - 4);
+            CC.text(ctx, `Place an apple · ${Math.max(0, Math.ceil(st.placeTimer))}`, C * S / 2, 20, { size: 16, color: '#d9480f' });
           }
           // snake
           const n = st.body.length;
           for (let i = n - 1; i >= 0; i--) {
             const b = st.body[i], t = i / Math.max(1, n - 1);
-            ctx.fillStyle = st.respawn > 0 ? `rgba(255,120,120,${0.4 + 0.6 * st.flash})` : `hsl(${115 - t * 40}, 65%, ${62 - t * 22}%)`;
+            ctx.fillStyle = st.respawn > 0 ? `rgba(255,120,120,${0.4 + 0.6 * st.flash})` : i === 0 ? '#0a1f9e' : `hsl(${232 + t * 45}, 85%, ${40 - t * 8}%)`;
             const pad = i === 0 ? 1 : 3;
             ctx.beginPath(); ctx.roundRect(b.x * S + pad, b.y * S + pad, S - pad * 2, S - pad * 2, 6); ctx.fill();
+            ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke();
           }
           if (n) { // eyes
             const h = st.body[0], [dx, dy] = DIRS[st.dir], cx = h.x * S + S / 2, cy = h.y * S + S / 2;
-            ctx.fillStyle = '#081009';
+            ctx.fillStyle = '#ffffff';
             for (const sgn of [-1, 1]) { ctx.beginPath(); ctx.arc(cx + dx * 5 - dy * 5 * sgn, cy + dy * 5 + dx * 5 * sgn, 2.6, 0, Math.PI * 2); ctx.fill(); }
           }
-          for (const p of st.parts) { ctx.fillStyle = `rgba(255,179,71,${p.t * 2})`; ctx.fillRect(p.x - 2, p.y - 2, 4, 4); }
+          for (const p of st.parts) { ctx.fillStyle = `rgba(255,110,0,${p.t * 2})`; ctx.fillRect(p.x - 2, p.y - 2, 4, 4); }
         },
         destroy() { st.destroyed = true; },
       };

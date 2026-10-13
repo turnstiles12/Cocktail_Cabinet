@@ -9,6 +9,17 @@
  *    the defense wins by surviving wave 7.
  *  - watch : the computer plays both sides.
  *
+ * Balance and variety. Out of the box the attack had the edge, so the defense now has more
+ * ammunition, wider and longer-lasting blasts, slower early warheads, and a city is rebuilt
+ * after any wave in which none was lost (defend and watch sides). From wave 2 each wave may
+ * also carry a random condition shown on the score plate and in the banner:
+ *  - helps the defense: Calm skies (warheads slower), Charged batteries (bigger blasts),
+ *    Supply drop (+5 interceptors per battery), Shield domes (each city absorbs one hit)
+ *  - helps the attack: Meteor storm (warheads faster), Armored warheads (some need two blasts),
+ *    Radar jam (interceptors land off target), MIRV rain (more warheads split)
+ * The condition is rubber-banded: the side that is currently losing is more likely to get
+ * a helpful one. The computer defense also starts a little sharper against a human attacker.
+ *
  * The computer defense solves for an intercept point per warhead, skips warheads already
  * covered by a blast, and at higher skill ignores warheads aimed at rubble.
  *
@@ -20,7 +31,18 @@
   const CC = window.CC;
   const W = 800, H = 600, GROUND = 560;
   const CITY_X = [140, 205, 270, 530, 595, 660], BAT_X = [50, 400, 750];
-  const BLAST = 36, GROW = 90, HOLD = 0.3, AMMO = 10;
+  const BLAST = 42, GROW = 90, HOLD = 0.4, AMMO = 12;
+  // wave conditions: who each one helps, a name for the plate, and a line for the banner
+  const EVENTS = {
+    slow: { side: 'def', name: 'Calm skies', text: 'Warheads fall slower' },
+    bigblast: { side: 'def', name: 'Charged batteries', text: 'Interceptor blasts are bigger' },
+    resupply: { side: 'def', name: 'Supply drop', text: '+5 interceptors per battery' },
+    shield: { side: 'def', name: 'Shield domes', text: 'Each city absorbs one hit' },
+    fast: { side: 'atk', name: 'Meteor storm', text: 'Warheads fall faster' },
+    armored: { side: 'atk', name: 'Armored warheads', text: 'Some need two blasts' },
+    jam: { side: 'atk', name: 'Radar jam', text: 'Interceptors land off target' },
+    multi: { side: 'atk', name: 'MIRV rain', text: 'More warheads split' },
+  };
   const counterSpeed = (i) => (i === 1 ? 700 : 520);
 
   CC.register({
@@ -29,8 +51,8 @@
     icon: `<svg viewBox="0 0 64 64" fill="none" stroke-width="2.5"><path d="M8 4 L22 46 M40 2 L30 44" stroke="#e0405a"/><path d="M32 60 L48 30" stroke="#f3e6cf"/><circle cx="48" cy="28" r="8" stroke="#ffb347"/><path d="M4 58 H60" stroke="#c9a15a" stroke-width="4"/></svg>`,
     size: { w: W, h: H },
     roles: [
-      { id: 'defend', label: 'You defend · computer attacks', help: 'Click to fire from the nearest battery with ammo, or aim with the mouse and press <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> for the left, middle or right battery. Interceptors burst where you click. Waves grow and speed up.' },
-      { id: 'attack', label: 'You attack · computer defends', help: 'Click near the ground to send a missile at that spot. Press <kbd>Space</kbd> to split every warhead still high in the sky into three (limited per wave). Flatten all six cities to win; the defense wins by surviving wave 7 and sharpens up each wave. Cities stay destroyed; batteries are rebuilt between waves.' },
+      { id: 'defend', label: 'You defend · computer attacks', help: 'Click to fire from the nearest battery with ammo, or aim with the mouse and press <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> for the left, middle or right battery. Interceptors burst where you click. Waves grow and speed up, and from wave 2 a random condition may help or hurt you (it is named on the score plate). Clear a wave without losing a city and one is rebuilt.' },
+      { id: 'attack', label: 'You attack · computer defends', help: 'Click near the ground to send a missile at that spot. Press <kbd>Space</kbd> to split every warhead still high in the sky into three (limited per wave). Flatten all six cities to win; the defense wins by surviving wave 7 and sharpens up each wave. Cities stay destroyed; batteries are rebuilt between waves. From wave 2 a random condition may help or hurt you (named on the score plate); it leans toward whoever is losing.' },
       { id: 'watch', label: 'Watch computer vs computer', help: 'Both sides are played by the computer.' },
     ],
     create(api) {
@@ -38,17 +60,40 @@
       const st = {
         cities: CITY_X.map((x) => ({ x, alive: true })), bats: BAT_X.map((x) => ({ x, alive: true, ammo: AMMO })),
         inc: [], ctr: [], exp: [], parts: [], wave: 0, score: 0, over: false, gap: 2,
-        toSpawn: 0, spawnT: 0, atkAmmo: 0, mirv: 0, atkCool: 0, ai: { cool: 0, atkT: 0 }, nextCity: 10000, id: 0, mouseSeen: false,
+        toSpawn: 0, spawnT: 0, atkAmmo: 0, mirv: 0, atkCool: 0, ai: { cool: 0, atkT: 0 }, nextCity: 6000, id: 0, mouseSeen: false,
+        ev: null, lost: 0, evHistory: [],
       };
       const L = () => st.wave;
-      const defSkill = () => (humanAtk ? Math.min(0.9, 0.1 + (L() - 1) * 0.13) : CC.clamp((L() - 1) / 6, 0, 1));
-      const missileSpeed = () => (humanAtk ? Math.min(55 + 6 * L(), 150) : Math.min(40 + 8 * L(), 150));
+      const defSkill = () => (humanAtk ? Math.min(0.9, 0.18 + (L() - 1) * 0.13) : CC.clamp((L() - 1) / 6, 0, 1));
+      const missileSpeed = () => (humanAtk ? Math.min(55 + 6 * L(), 150) : Math.min(34 + 6.5 * L(), 135));
+      const evId = () => (st.ev ? st.ev.id : null);
+      const blastR = () => BLAST * (evId() === 'bigblast' ? 1.4 : 1);
+      const speedMult = () => (evId() === 'fast' ? 1.25 : evId() === 'slow' ? 0.8 : 1);
+      const citiesAlive = () => st.cities.filter((c) => c.alive).length;
+
+      /** Chooses this wave's condition. The side that is currently losing is more likely to get a helpful one. */
+      function pickEvent() {
+        if (L() < 2 || Math.random() < 0.15) return null;
+        const alive = citiesAlive();
+        let pDef = 0.5;
+        if (humanDef) pDef = alive <= 3 ? 0.8 : alive >= 6 ? 0.25 : 0.5;     // the player is being flattened: help the defense
+        else if (humanAtk) pDef = alive >= 5 ? 0.25 : alive <= 2 ? 0.75 : 0.5; // the cities are mostly standing: help the attack
+        const side = Math.random() < pDef ? 'def' : 'atk';
+        const pool = Object.keys(EVENTS).filter((k) => EVENTS[k].side === side);
+        const id = pool[Math.floor(Math.random() * pool.length)];
+        return { id, ...EVENTS[id] };
+      }
 
       function startWave() {
-        st.wave++;
-        for (const b of st.bats) { b.alive = true; b.ammo = AMMO; }
-        if (humanAtk) { st.atkAmmo = 7 + 2 * L(); st.mirv = 1 + Math.floor(L() / 2); api.banner(`Wave ${L()}`, `${st.atkAmmo} missiles · ${st.mirv} split${st.mirv > 1 ? 's' : ''}`, 1500); }
-        else { st.toSpawn = 8 + 3 * L(); st.spawnT = 1; api.banner(`Wave ${L()}`, humanDef ? 'Defend the cities' : '', 1300); }
+        st.wave++; st.lost = 0;
+        st.ev = pickEvent(); st.evHistory.push(evId());
+        for (const b of st.bats) { b.alive = true; b.ammo = AMMO + (evId() === 'resupply' ? 5 : 0); }
+        for (const c of st.cities) c.sh = c.alive && evId() === 'shield';
+        const evText = st.ev ? `${st.ev.name}: ${st.ev.text}` : '';
+        if (humanAtk) {
+          st.atkAmmo = 7 + 2 * L(); st.mirv = 1 + Math.floor(L() / 2) + (evId() === 'multi' ? 1 : 0);
+          api.banner(`Wave ${L()}`, `${st.atkAmmo} missiles · ${st.mirv} split${st.mirv > 1 ? 's' : ''}${evText ? ' · ' + evText : ''}`, 1900);
+        } else { st.toSpawn = 7 + Math.round(2.5 * L()); st.spawnT = 1; api.banner(`Wave ${L()}`, [humanDef ? 'Defend the cities' : '', evText].filter(Boolean).join(' · '), 1700); }
       }
       function targets() {
         const t = [];
@@ -57,8 +102,9 @@
         return t;
       }
       function launchIncoming(sx, tx, speed, from) {
-        const sy = from ? from.y : 0, d = Math.hypot(tx - sx, GROUND - sy);
-        st.inc.push({ id: ++st.id, sx, sy, x: sx, y: sy, tx, ty: GROUND, vx: ((tx - sx) / d) * speed, vy: ((GROUND - sy) / d) * speed, split: !!from, splitY: CC.rand(150, 280), seen: 0, assigned: 0 });
+        if (!from) speed *= speedMult();
+        const sy = from ? from.y : 0, d = Math.hypot(tx - sx, GROUND - sy), hp = !from && evId() === 'armored' && Math.random() < 0.4 ? 2 : 1;
+        st.inc.push({ id: ++st.id, hp, sx, sy, x: sx, y: sy, tx, ty: GROUND, vx: ((tx - sx) / d) * speed, vy: ((GROUND - sy) / d) * speed, split: !!from, splitY: CC.rand(150, 280), seen: 0, assigned: 0 });
       }
       function split(m, n, spread) {
         m.dead = true;
@@ -71,6 +117,7 @@
       function fireCounter(bi, tx, ty, target) {
         const b = st.bats[bi];
         if (!b.alive || b.ammo <= 0) return false;
+        if (evId() === 'jam') { tx = CC.clamp(tx + CC.rand(-24, 24), 5, W - 5); ty += CC.rand(-24, 24); } // radar jam scatters every shot
         ty = Math.min(ty, GROUND - 30);
         b.ammo--;
         st.ctr.push({ id: ++st.id, sx: b.x, sy: GROUND - 14, x: b.x, y: GROUND - 14, tx, ty, sp: counterSpeed(bi), target });
@@ -94,7 +141,7 @@
         for (const m of cand) {
           // is a blast already going to catch it?
           if (s > 0.3) {
-            const covered = st.ctr.some((c) => { const tl = Math.hypot(c.tx - c.x, c.ty - c.y) / c.sp + 0.2, p = mPos(m, tl); return Math.hypot(p.x - c.tx, p.y - c.ty) < BLAST * 0.7; });
+            const covered = st.ctr.some((c) => { const tl = Math.hypot(c.tx - c.x, c.ty - c.y) / c.sp + 0.2, p = mPos(m, tl); return Math.hypot(p.x - c.tx, p.y - c.ty) < blastR() * 0.7; });
             if (covered) { m.assigned = -1; continue; }
           }
           let best = null;
@@ -123,23 +170,28 @@
         for (const x of t) { r -= x.w; if (r <= 0) { pick = x; break; } }
         launchIncoming(CC.rand(20, W - 20), pick.x + CC.rand(-8, 8), missileSpeed());
         const m = st.inc[st.inc.length - 1];
-        if (L() >= 3 && Math.random() < 0.2) m.willSplit = 2 + (L() >= 6 ? 1 : 0);
+        if ((L() >= 3 && Math.random() < 0.2) || (evId() === 'multi' && Math.random() < 0.45)) m.willSplit = 2 + (L() >= 6 ? 1 : 0);
         st.toSpawn--;
       }
 
       function hitGround(m) {
         m.dead = true; boom(m.x, GROUND - 4, 30, 'hit'); CC.boom(0.4, 0.07);
-        for (const c of st.cities) if (c.alive && Math.abs(c.x - m.x) < 28) { c.alive = false; if (humanAtk) { st.score += 100; CC.beep(880, 0.15, 'triangle'); } }
+        for (const c of st.cities) if (c.alive && Math.abs(c.x - m.x) < 28) {
+          if (c.sh) { c.sh = false; CC.beep(500, 0.12, 'triangle'); continue; }   // a shield dome soaks up one hit
+          c.alive = false; st.lost++; if (humanAtk) { st.score += 100; CC.beep(880, 0.15, 'triangle'); }
+        }
         for (const b of st.bats) if (b.alive && Math.abs(b.x - m.x) < 28) { b.alive = false; b.ammo = 0; if (humanAtk) st.score += 50; }
       }
 
       function hudNow(citiesLeft) {
-        if (humanAtk) api.hud(`Cities down ${6 - citiesLeft} / 6`, `Wave ${L()} of 7`, `Missiles ${st.atkAmmo} · splits ${st.mirv}`);
-        else api.hud(`${humanDef ? 'You' : 'Defense'} ${st.score}`, `Wave ${L()}`, `Cities ${citiesLeft} · ammo ${st.bats.map((b) => (b.alive ? b.ammo : 'x')).join(' ')}`);
+        const tag = st.ev ? ` · ${st.ev.name}` : '';
+        if (humanAtk) api.hud(`Cities down ${6 - citiesLeft} / 6`, `Wave ${L()} of 7${tag}`, `Missiles ${st.atkAmmo} · splits ${st.mirv}`);
+        else api.hud(`${humanDef ? 'You' : 'Defense'} ${st.score}`, `Wave ${L()}${tag}`, `Cities ${citiesLeft} · ammo ${st.bats.map((b) => (b.alive ? b.ammo : 'x')).join(' ')}`);
       }
 
       startWave();
       return {
+        state: st,
         update(dt) {
           const inp = api.input;
           for (const p of st.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.t -= dt; } st.parts = st.parts.filter((p) => p.t > 0);
@@ -177,7 +229,7 @@
           // counters
           for (const c of st.ctr) {
             const dx = c.tx - c.x, dy = c.ty - c.y, d = Math.hypot(dx, dy), step = c.sp * dt;
-            if (d <= step) { c.done = true; boom(c.tx, c.ty, BLAST, 'def'); CC.boom(0.2, 0.04); }
+            if (d <= step) { c.done = true; boom(c.tx, c.ty, blastR(), 'def'); CC.boom(0.2, 0.04); }
             else { c.x += (dx / d) * step; c.y += (dy / d) * step; }
           }
           st.ctr = st.ctr.filter((c) => !c.done);
@@ -187,6 +239,8 @@
             m.x += m.vx * dt; m.y += m.vy * dt;
             if (m.willSplit && m.y > m.splitY) { split(m, m.willSplit, 60); continue; }
             for (const e of st.exp) if (Math.hypot(m.x - e.x, m.y - e.y) < e.r) {
+              if (m.lastExp === e) continue;                                  // armor was already cracked by this very burst
+              if (m.hp > 1) { m.hp--; m.lastExp = e; CC.beep(420, 0.05, 'square'); continue; } // armor takes one blast per burst
               m.dead = true; boom(m.x, m.y, 22, 'chain');
               if (humanDef) st.score += 25;
               break;
@@ -211,9 +265,10 @@
             st.gap -= dt;
             if (st.gap <= 0) {
               st.gap = 2;
+              if (!humanAtk && !st.lost) { const dead = st.cities.find((c) => !c.alive); if (dead) { dead.alive = true; api.banner('City rebuilt', 'A clean wave earns one back', 900); } }
               if (humanDef) {
                 const bonus = citiesLeft * 100 + st.bats.reduce((a, b) => a + b.ammo * 5, 0); st.score += bonus;
-                while (st.score >= st.nextCity) { st.nextCity += 10000; const dead = st.cities.find((c) => !c.alive); if (dead) dead.alive = true; }
+                while (st.score >= st.nextCity) { st.nextCity += 6000; const dead = st.cities.find((c) => !c.alive); if (dead) dead.alive = true; }
               }
               if (humanAtk && L() >= 7) { st.over = true; api.banner('The defense holds', `${citiesLeft} ${citiesLeft === 1 ? 'city' : 'cities'} survived 7 waves. Press R to play again.`, 0); return; }
               startWave();
@@ -230,6 +285,7 @@
             if (c.alive) {
               ctx.fillStyle = '#ffb347';
               [[-18, 10, 14], [-6, 7, 22], [4, 8, 16], [13, 6, 11]].forEach(([dx, w, h]) => ctx.fillRect(c.x + dx, GROUND - h, w, h));
+              if (c.sh) { ctx.strokeStyle = 'rgba(94,200,255,.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(c.x, GROUND, 30, Math.PI, 0); ctx.stroke(); ctx.fillStyle = 'rgba(94,200,255,.12)'; ctx.fill(); }
             } else { ctx.fillStyle = '#4a3a2a'; ctx.fillRect(c.x - 18, GROUND - 4, 36, 4); }
           }
           st.bats.forEach((b) => {
@@ -240,7 +296,7 @@
           ctx.lineWidth = 1.5;
           for (const m of st.inc) {
             ctx.strokeStyle = 'rgba(224,64,90,.8)'; ctx.beginPath(); ctx.moveTo(m.sx, m.sy); ctx.lineTo(m.x, m.y); ctx.stroke();
-            ctx.fillStyle = '#fff'; ctx.fillRect(m.x - 1.5, m.y - 1.5, 3, 3);
+            if (m.hp > 1) { ctx.fillStyle = '#ffb347'; ctx.fillRect(m.x - 3, m.y - 3, 6, 6); } else { ctx.fillStyle = '#fff'; ctx.fillRect(m.x - 1.5, m.y - 1.5, 3, 3); }
           }
           for (const c of st.ctr) {
             ctx.strokeStyle = 'rgba(243,230,207,.8)'; ctx.beginPath(); ctx.moveTo(c.sx, c.sy); ctx.lineTo(c.x, c.y); ctx.stroke();

@@ -8,9 +8,18 @@
  *    around the ship). Destroy 3 ships to win; the pilot wins by clearing wave 8.
  *  - watch : the computer plays both sides.
  *
+ * Power-ups (pilot side only): now and then a glowing token drifts across the screen. Fly the
+ * ship into it (direct contact) to pick it up before it fades.
+ *  - R : rapid fire, a much faster gun with more bullets allowed, for 10 seconds
+ *  - M : missiles, four homing missiles; press X (or click) to fire one, the blast breaks every rock close by
+ *  - S : shield, for 6 seconds the ship is unharmed and ramming a rock breaks it
+ *  - 3 : triple shot, three bullets in a fan, for 10 seconds
+ *
  * The computer pilot computes intercept angles, estimates closest approach for every rock,
  * dodges when one is about to hit, and otherwise shoots the cheapest target. Aim noise and
  * reaction time improve with each wave.
+ *
+ * Test hook: the object returned by create() exposes {@code state}.
  *
  * @module games/asteroids
  * @requires js/core.js
@@ -21,6 +30,15 @@
   const W = 800, H = 600;
   const ROT = 4.2, THRUST = 240, MAXV = 360, BS = 520, BLIFE = 1.0, MAXB = 5, COOL = 0.17, SHIPR = 10;
   const RAD = { 3: 40, 2: 22, 1: 11 }, PTS = { 3: 20, 2: 50, 1: 100 };
+  // power-ups
+  const PU_R = 14, ITEM_LIFE = 14, RAPID_T = 10, SPREAD_T = 10, SHIELD_T = 6, MISSILE_PACK = 4, MISSILE_MAX = 8;
+  const RAPID_COOL = 0.07, RAPID_MAXB = 10, SPREAD_FAN = 0.2, BLAST_R = 70;
+  const PU = {
+    rapid: { letter: 'R', color: '#ffd24a', name: 'Rapid fire' },
+    missile: { letter: 'M', color: '#ff6b6b', name: 'Missiles' },
+    shield: { letter: 'S', color: '#5ec8ff', name: 'Shield' },
+    spread: { letter: '3', color: '#7ee07a', name: 'Triple shot' },
+  };
   const wrapD = (d, span) => d - span * Math.round(d / span);
   const wrap = (o) => { o.x = ((o.x % W) + W) % W; o.y = ((o.y % H) + H) % H; };
 
@@ -32,11 +50,11 @@
 
   CC.register({
     id: 'asteroids', title: 'Asteroids',
-    blurb: 'Fly the ship, or fling the rocks at a computer pilot.',
+    blurb: 'Fly the ship and grab power-ups, or fling the rocks at a computer pilot.',
     icon: `<svg viewBox="0 0 64 64" fill="none" stroke-width="3" stroke-linejoin="round"><path d="M12 14 l10 -4 10 4 2 10 -8 8 -12 -2 -4 -8z" stroke="#f3e6cf"/><path d="M44 50 l-8 -16 -8 16 8 -4z" stroke="#ffb347"/><circle cx="50" cy="22" r="2" fill="#ffb347" stroke="none"/></svg>`,
     size: { w: W, h: H },
     roles: [
-      { id: 'pilot', label: 'You fly · computer sends rocks', help: '<kbd>←</kbd> <kbd>→</kbd> turn, <kbd>↑</kbd> thrust, <kbd>Space</kbd> fire. Waves get bigger and faster.' },
+      { id: 'pilot', label: 'You fly · computer sends rocks', help: '<kbd>←</kbd> <kbd>→</kbd> turn, <kbd>↑</kbd> thrust, <kbd>Space</kbd> fire. Waves get bigger and faster. Fly into the glowing tokens for power-ups: <b>R</b> rapid fire, <b>M</b> missiles (press <kbd>X</kbd> or click to fire), <b>S</b> shield, <b>3</b> triple shot.' },
       { id: 'sender', label: 'You send rocks · computer flies', help: 'Drag on the screen to fling an asteroid — drag direction and length set its course and speed. A quick click aims at the ship. You cannot launch inside the ring around the ship. Destroy all 3 ships to win; the pilot wins by clearing wave 8, and it gets sharper each wave.' },
       { id: 'watch', label: 'Watch computer vs computer', help: 'Both sides are played by the computer.' },
     ],
@@ -46,7 +64,9 @@
         ship: null, rocks: [], bullets: [], parts: [], lives: 3, score: 0, wave: 0, cool: 0,
         dead: 0, deadT: 0, over: false, waveGap: 1.2, ammo: 0, sendCool: 0, idle: 0, nextLife: 10000,
         ai: { t: 0, aim: 0, thrust: false, fire: false, noise: 0 }, drag: null, msg: null,
+        items: [], missiles: [], blasts: [], pw: { rapid: 0, spread: 0, shield: 0, missiles: 0 }, puT: 6, missileCool: 0,
       };
+      const powerupsOn = humanPilot;      // only the human pilot gets power-ups; the computer pilot plays with the plain ship
       const skill = () => (humanSender ? Math.min(0.92, 0.3 + (st.wave - 1) * 0.1) : CC.clamp((st.wave - 1) / 6, 0, 1));
       const maxRockSpeed = () => 70 + 12 * st.wave;
 
@@ -80,6 +100,7 @@
       }
       function shipDies() {
         const s = st.ship; explode(s.x, s.y, 40, '#ffb347'); CC.boom(0.7, 0.1);
+        st.pw = { rapid: 0, spread: 0, shield: 0, missiles: 0 }; st.missiles = [];
         st.ship = null; st.lives--; st.deadT = 0;
         if (st.lives <= 0) {
           st.over = true;
@@ -90,9 +111,67 @@
       }
       function fire() {
         const s = st.ship;
-        if (!s || st.cool > 0 || st.bullets.length >= MAXB) return;
-        st.bullets.push({ x: s.x + Math.cos(s.a) * 14, y: s.y + Math.sin(s.a) * 14, vx: s.vx + Math.cos(s.a) * BS, vy: s.vy + Math.sin(s.a) * BS, t: BLIFE });
-        st.cool = COOL; CC.beep(900, 0.04, 'square', 0.02, 0.5);
+        const rapid = st.pw.rapid > 0, spread = st.pw.spread > 0;
+        if (!s || st.cool > 0 || st.bullets.length >= (rapid ? RAPID_MAXB : MAXB) + (spread ? 4 : 0)) return;
+        for (const off of spread ? [-SPREAD_FAN, 0, SPREAD_FAN] : [0]) {
+          const a = s.a + off;
+          st.bullets.push({ x: s.x + Math.cos(a) * 14, y: s.y + Math.sin(a) * 14, vx: s.vx + Math.cos(a) * BS, vy: s.vy + Math.sin(a) * BS, t: BLIFE });
+        }
+        st.cool = rapid ? RAPID_COOL : COOL; CC.beep(900, 0.04, 'square', 0.02, 0.5);
+      }
+
+      // ---------- power-ups ----------
+      function spawnItem() {
+        const s = st.ship; let x, y, tries = 0;
+        do { x = CC.rand(W); y = CC.rand(H); tries++; } while (tries < 20 && s && Math.hypot(wrapD(x - s.x, W), wrapD(y - s.y, H)) < 150);
+        const types = Object.keys(PU), a = CC.rand(0, 6.28), sp = CC.rand(40, 80);
+        st.items.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, type: CC.pick(types), life: ITEM_LIFE, ph: CC.rand(0, 6.28) });
+      }
+      function pickUp(it) {
+        const t = it.type;
+        if (t === 'rapid') st.pw.rapid = RAPID_T;
+        else if (t === 'spread') st.pw.spread = SPREAD_T;
+        else if (t === 'shield') st.pw.shield = SHIELD_T;
+        else st.pw.missiles = Math.min(MISSILE_MAX, st.pw.missiles + MISSILE_PACK);
+        CC.beep(880, 0.12, 'triangle', 0.04, 1.4);
+        api.banner(PU[t].name, t === 'missile' ? 'Press X or click to fire' : '', 900);
+      }
+      function fireMissile() {
+        const s = st.ship;
+        if (!s || st.pw.missiles <= 0 || st.missileCool > 0) return;
+        st.pw.missiles--; st.missileCool = 0.45;
+        st.missiles.push({ x: s.x + Math.cos(s.a) * 14, y: s.y + Math.sin(s.a) * 14, a: s.a, sp: 200, vx: 0, vy: 0, t: 3 });
+        CC.beep(300, 0.15, 'sawtooth', 0.03, 0.6);
+      }
+      function detonate(m) {
+        st.blasts.push({ x: m.x, y: m.y, t: 0.4 }); explode(m.x, m.y, 26, '#ff9a4a'); CC.boom(0.3, 0.08);
+        for (const r of st.rocks.slice()) {
+          if (Math.hypot(wrapD(r.x - m.x, W), wrapD(r.y - m.y, H)) < BLAST_R + r.r) { const i = st.rocks.indexOf(r); if (i >= 0) splitRock(r, i); }
+        }
+      }
+      function updatePowerups(dt) {
+        const s = st.ship;
+        for (const k of ['rapid', 'spread', 'shield']) st.pw[k] = Math.max(0, st.pw[k] - dt);
+        st.missileCool = Math.max(0, st.missileCool - dt);
+        for (const b of st.blasts) b.t -= dt;
+        st.blasts = st.blasts.filter((b) => b.t > 0);
+        // missiles steer toward the nearest rock
+        for (const m of st.missiles) {
+          let tgt = null, bd = Infinity;
+          for (const r of st.rocks) { const d = Math.hypot(wrapD(r.x - m.x, W), wrapD(r.y - m.y, H)); if (d < bd) { bd = d; tgt = r; } }
+          if (tgt) m.a += CC.clamp(CC.angleDiff(m.a, Math.atan2(wrapD(tgt.y - m.y, H), wrapD(tgt.x - m.x, W))), -5 * dt, 5 * dt);
+          m.sp = Math.min(340, m.sp + 500 * dt); m.vx = Math.cos(m.a) * m.sp; m.vy = Math.sin(m.a) * m.sp;
+          m.x += m.vx * dt; m.y += m.vy * dt; wrap(m); m.t -= dt;
+          if (m.t <= 0 || st.rocks.some((r) => Math.hypot(wrapD(r.x - m.x, W), wrapD(r.y - m.y, H)) < r.r + 6)) { m.dead = true; detonate(m); }
+        }
+        st.missiles = st.missiles.filter((m) => !m.dead);
+        // tokens drift across the screen and fade
+        if (!st.over) { st.puT -= dt; if (st.puT <= 0 && s) { st.puT = CC.rand(8, 13); if (st.items.length < 2) spawnItem(); } }
+        for (const it of st.items) {
+          it.x += it.vx * dt; it.y += it.vy * dt; wrap(it); it.life -= dt;
+          if (s && Math.hypot(wrapD(it.x - s.x, W), wrapD(it.y - s.y, H)) < PU_R + SHIPR + 2) { it.got = true; pickUp(it); }
+        }
+        st.items = st.items.filter((it) => !it.got && it.life > 0);
       }
       function launch(x, y, vx, vy) {
         const s = st.ship;
@@ -151,6 +230,7 @@
 
       startWave();
       return {
+        state: st,
         update(dt) {
           const inp = api.input;
           st.cool = Math.max(0, st.cool - dt); st.sendCool = Math.max(0, st.sendCool - dt);
@@ -167,17 +247,22 @@
               if (inp.keys.ArrowRight || inp.keys.KeyD) s.a += ROT * dt;
               s.thrusting = !!(inp.keys.ArrowUp || inp.keys.KeyW);
               if (inp.keys.Space) fire();
+              if (inp.pressed.KeyX || inp.mouse.clicked) fireMissile();
             } else aiControl(dt);
             if (s.thrusting) { s.vx += Math.cos(s.a) * THRUST * dt; s.vy += Math.sin(s.a) * THRUST * dt; }
             const sp = Math.hypot(s.vx, s.vy); if (sp > MAXV) { s.vx *= MAXV / sp; s.vy *= MAXV / sp; }
             const drag = Math.pow(0.55, dt); s.vx *= drag; s.vy *= drag;
             s.x += s.vx * dt; s.y += s.vy * dt; wrap(s); s.inv = Math.max(0, s.inv - dt);
-            if (s.inv <= 0) for (const r of st.rocks) if (Math.hypot(wrapD(r.x - s.x, W), wrapD(r.y - s.y, H)) < r.r * 0.9 + SHIPR) { shipDies(); break; }
+            if (s.inv <= 0) for (let j = st.rocks.length - 1; j >= 0; j--) {
+              const r = st.rocks[j];
+              if (Math.hypot(wrapD(r.x - s.x, W), wrapD(r.y - s.y, H)) < r.r * 0.9 + SHIPR) { if (st.pw.shield > 0) splitRock(r, j); else { shipDies(); break; } }
+            }
           } else {
             st.deadT += dt;
             const clear = st.rocks.every((r) => Math.hypot(wrapD(r.x - W / 2, W), wrapD(r.y - H / 2, H)) > 150);
             if (st.deadT > 1.5 && (clear || st.deadT > 4)) newShip();
           }
+          if (powerupsOn) updatePowerups(dt);
           // bullets
           for (const b of st.bullets) { b.x += b.vx * dt; b.y += b.vy * dt; b.t -= dt; wrap(b); }
           for (let i = st.bullets.length - 1; i >= 0; i--) {
@@ -228,7 +313,25 @@
             ctx.strokeStyle = '#ffb347'; CC.glow(ctx, '#ffb347', 8); ctx.beginPath(); ctx.moveTo(15, 0); ctx.lineTo(-10, -9); ctx.lineTo(-6, 0); ctx.lineTo(-10, 9); ctx.closePath(); ctx.stroke(); CC.noGlow(ctx);
             if (s.thrusting && Math.random() < 0.8) { ctx.strokeStyle = '#e0405a'; ctx.beginPath(); ctx.moveTo(-7, -4); ctx.lineTo(-17 - Math.random() * 6, 0); ctx.lineTo(-7, 4); ctx.stroke(); }
             ctx.restore();
+            if (st.pw.shield > 0 && (st.pw.shield > 2 || Math.floor(st.pw.shield * 6) % 2)) { ctx.strokeStyle = '#5ec8ff'; CC.glow(ctx, '#5ec8ff', 10); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 20, 0, 6.28); ctx.stroke(); CC.noGlow(ctx); }
           });
+          // power-up tokens, missiles and blasts
+          for (const it of st.items) {
+            const P = PU[it.type]; if (it.life < 3 && Math.floor(it.life * 6) % 2) continue;
+            at(it.x, it.y, PU_R + 6, (x, y) => {
+              const pulse = 1 + 0.12 * Math.sin(performance.now() / 180 + it.ph);
+              CC.glow(ctx, P.color, 14); ctx.strokeStyle = P.color; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, PU_R * pulse, 0, 6.28); ctx.stroke(); CC.noGlow(ctx);
+              ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.beginPath(); ctx.arc(x, y, PU_R - 2, 0, 6.28); ctx.fill();
+              CC.text(ctx, P.letter, x, y + 1, { size: 15, color: P.color, font: 'Chivo, sans-serif' });
+            });
+          }
+          ctx.lineWidth = 2;
+          for (const m of st.missiles) at(m.x, m.y, 12, (x, y) => {
+            ctx.save(); ctx.translate(x, y); ctx.rotate(m.a); ctx.fillStyle = '#ff6b6b'; ctx.fillRect(-6, -2.5, 12, 5);
+            ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.moveTo(-6, -2); ctx.lineTo(-13 - Math.random() * 4, 0); ctx.lineTo(-6, 2); ctx.fill(); ctx.restore();
+          });
+          for (const b of st.blasts) { const k = 1 - b.t / 0.4; ctx.globalAlpha = 1 - k; ctx.strokeStyle = '#ff9a4a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(b.x, b.y, BLAST_R * k, 0, 6.28); ctx.stroke(); ctx.globalAlpha = 1; }
+          ctx.lineWidth = 2;
           ctx.fillStyle = '#fff';
           for (const b of st.bullets) { ctx.beginPath(); ctx.arc(b.x, b.y, 2, 0, 6.28); ctx.fill(); }
           for (const p of st.parts) { ctx.globalAlpha = Math.min(1, p.t * 2); ctx.fillStyle = p.col; ctx.fillRect(p.x - 1.5, p.y - 1.5, 3, 3); } ctx.globalAlpha = 1;
@@ -243,6 +346,14 @@
             ctx.fillStyle = '#ffb347'; ctx.fillRect(W - cw - 14, H - 22, cw * (1 - st.sendCool / 0.9), 8);
           }
           if (st.msg) CC.text(ctx, st.msg.text, W / 2, 30, { size: 16, color: '#e0405a' });
+          if (powerupsOn && !st.over) {
+            const tags = [];
+            if (st.pw.rapid > 0) tags.push(`RAPID ${Math.ceil(st.pw.rapid)}s`);
+            if (st.pw.spread > 0) tags.push(`TRIPLE ${Math.ceil(st.pw.spread)}s`);
+            if (st.pw.shield > 0) tags.push(`SHIELD ${Math.ceil(st.pw.shield)}s`);
+            if (st.pw.missiles > 0) tags.push(`MISSILES ${st.pw.missiles} (X)`);
+            if (tags.length) CC.text(ctx, tags.join('   ·   '), 14, H - 16, { size: 13, align: 'left', color: '#ffb347', font: 'Chivo, sans-serif' });
+          }
         },
         destroy() { st.destroyed = true; },
       };

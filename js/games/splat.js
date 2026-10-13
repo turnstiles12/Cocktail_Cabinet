@@ -81,6 +81,28 @@
     return { flap: bestFirst, chunk };
   }
 
+  // ---------- looks the player can pick (saved in the browser) ----------
+  const BIRDS = {
+    yellow: { name: 'Yellow', body: '#ffd23f', wing: '#e0a800', beak: '#ff7a1a' },
+    orange: { name: 'Orange', body: '#ffb347', wing: '#e89a2e', beak: '#e0405a' },
+    red: { name: 'Red', body: '#e0405a', wing: '#a8203a', beak: '#ffd23f' },
+    pink: { name: 'Pink', body: '#ff8ad0', wing: '#d4509e', beak: '#ffd23f' },
+    purple: { name: 'Purple', body: '#b07cff', wing: '#7a4ad1', beak: '#ffd23f' },
+    blue: { name: 'Blue', body: '#4aa8ff', wing: '#2273c9', beak: '#ffb347' },
+    green: { name: 'Green', body: '#6fd86a', wing: '#3aa23a', beak: '#ff7a1a' },
+    white: { name: 'White', body: '#f4f1e8', wing: '#c8c3b4', beak: '#ff7a1a' },
+  };
+  const PIPES = {
+    green: { name: 'Green', body: '#4caf50', cap: '#7ee07a' },
+    blue: { name: 'Blue', body: '#3d8bd9', cap: '#7cc0ff' },
+    red: { name: 'Red', body: '#c9344c', cap: '#ff7a8c' },
+    orange: { name: 'Orange', body: '#d97a1f', cap: '#ffb347' },
+    yellow: { name: 'Yellow', body: '#cfa81c', cap: '#ffe066' },
+    pink: { name: 'Pink', body: '#d9569f', cap: '#ff9ad0' },
+    purple: { name: 'Purple', body: '#8a55c9', cap: '#c39bff' },
+    gray: { name: 'Gray', body: '#7d8794', cap: '#b9c2cf' },
+  };
+
   CC.register({
     id: 'splat', title: 'Splat',
     blurb: 'Flap through the columns, or build columns the computer has to thread.',
@@ -93,6 +115,37 @@
     ],
     create(api) {
       const role = api.role, humanBird = role === 'flap', humanBuilder = role === 'columns';
+      // chosen colours, remembered between visits
+      const look = { bird: CC.store.get('splatBird', 'orange'), pipe: CC.store.get('splatPipe', 'green') };
+      if (!BIRDS[look.bird]) look.bird = 'orange';
+      if (!PIPES[look.pipe]) look.pipe = 'green';
+      /** Builds the colour pickers and puts them under the side buttons; returns the element, or null without a page. */
+      function buildPicker() {
+        if (typeof document === 'undefined' || !document.getElementById) return null;
+        const anchor = document.getElementById('roles');
+        if (!anchor || !anchor.after) return null;
+        const row = CC.el('div', { class: 'splat-look', style: 'display:flex;flex-wrap:wrap;gap:6px 22px;justify-content:center;align-items:center;margin:0 auto 8px;max-width:900px' });
+        const group = (label, key, table, storeKey) => {
+          const wrap = CC.el('div', { role: 'radiogroup', 'aria-label': label, style: 'display:flex;align-items:center;gap:7px' });
+          wrap.append(CC.el('span', { text: label, style: 'font-weight:800;font-size:.9rem;color:#f3e6cf;margin-right:2px' }));
+          const dots = {};
+          const mark = () => { for (const id of Object.keys(dots)) { const on = id === look[key]; dots[id].setAttribute('aria-checked', String(on)); dots[id].style.borderColor = on ? '#ffffff' : 'rgba(0,0,0,.55)'; dots[id].style.transform = on ? 'scale(1.18)' : 'none'; } };
+          for (const id of Object.keys(table)) {
+            const c = table[id];
+            dots[id] = CC.el('button', {
+              type: 'button', role: 'radio', title: c.name, 'aria-label': `${label} ${c.name}`,
+              style: `width:26px;height:26px;border-radius:50%;padding:0;cursor:pointer;border:3px solid rgba(0,0,0,.55);background:${c.cap ? `linear-gradient(135deg,${c.cap} 0 45%,${c.body} 45%)` : c.body}`,
+              onclick: () => { look[key] = id; CC.store.set(storeKey, id); mark(); const cv = document.getElementById('screen'); if (cv && cv.focus) cv.focus({ preventScroll: true }); },
+            });
+            wrap.append(dots[id]);
+          }
+          mark(); return wrap;
+        };
+        row.append(group('Bird', 'bird', BIRDS, 'splatBird'), group('Pipes', 'pipe', PIPES, 'splatPipe'));
+        anchor.after(row); return row;
+      }
+      let picker = null;
+      try { picker = buildPicker(); } catch (e) { picker = null; }
       const st = {
         bird: { y: H / 2, vy: 0, rot: 0 }, cols: [], passed: 0, splats: 0, best: CC.store.get('splatBest', 0),
         prevGap: H / 2, ghost: H / 2, dead: 0, over: false, started: !humanBird, frame: 0, plan: { flap: false, chunk: 6 },
@@ -192,8 +245,9 @@
           for (let i = 0; i < 12; i++) { const x = ((i * 70 - st.scroll * 0.2) % (W + 70) + W + 70) % (W + 70) - 70; ctx.fillRect(x, GROUND - 60 - ((i * 37) % 70), 50, 200); }
           for (const c of st.cols) {
             const top = c.gy - c.gap / 2, bot = c.gy + c.gap / 2;
-            ctx.fillStyle = '#4caf50'; ctx.fillRect(c.x, 0, CW, top); ctx.fillRect(c.x, bot, CW, GROUND - bot);
-            ctx.fillStyle = '#7ee07a'; ctx.fillRect(c.x - 4, top - 18, CW + 8, 18); ctx.fillRect(c.x - 4, bot, CW + 8, 18);
+            const pc = PIPES[look.pipe];
+            ctx.fillStyle = pc.body; ctx.fillRect(c.x, 0, CW, top); ctx.fillRect(c.x, bot, CW, GROUND - bot);
+            ctx.fillStyle = pc.cap; ctx.fillRect(c.x - 4, top - 18, CW + 8, 18); ctx.fillRect(c.x - 4, bot, CW + 8, 18);
             ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(c.x + CW - 12, 0, 12, top - 18); ctx.fillRect(c.x + CW - 12, bot + 18, 12, GROUND - bot - 18);
           }
           ctx.fillStyle = '#5b3a22'; ctx.fillRect(0, GROUND, W, H - GROUND);
@@ -207,17 +261,19 @@
           if (st.dead <= 0 || st.dead > 1.0) {
             const b = st.bird;
             ctx.save(); ctx.translate(BX, b.y); ctx.rotate(b.rot);
-            ctx.fillStyle = '#ffb347'; ctx.beginPath(); ctx.ellipse(0, 0, BRAD + 2, BRAD, 0, 0, Math.PI * 2); ctx.fill();
+            const bc = BIRDS[look.bird];
+            ctx.fillStyle = bc.body; ctx.beginPath(); ctx.ellipse(0, 0, BRAD + 2, BRAD, 0, 0, Math.PI * 2); ctx.fill();
             ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(6, -4, 4.5, 0, Math.PI * 2); ctx.fill();
             ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(7.5, -4, 2, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#e0405a'; ctx.beginPath(); ctx.moveTo(12, 1); ctx.lineTo(22, 4); ctx.lineTo(12, 7); ctx.fill();
-            ctx.fillStyle = '#e89a2e'; ctx.beginPath(); ctx.ellipse(-5, 3, 7, 4, -0.4 + (st.bird.vy < 0 ? -0.6 : 0.3), 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = bc.beak; ctx.beginPath(); ctx.moveTo(12, 1); ctx.lineTo(22, 4); ctx.lineTo(12, 7); ctx.fill();
+            ctx.fillStyle = bc.wing; ctx.beginPath(); ctx.ellipse(-5, 3, 7, 4, -0.4 + (st.bird.vy < 0 ? -0.6 : 0.3), 0, Math.PI * 2); ctx.fill();
             ctx.restore();
           }
-          for (const p of st.parts) { ctx.globalAlpha = Math.min(1, p.t * 2); ctx.fillStyle = '#ffb347'; ctx.fillRect(p.x - 3, p.y - 3, 6, 6); } ctx.globalAlpha = 1;
+          for (const p of st.parts) { ctx.globalAlpha = Math.min(1, p.t * 2); ctx.fillStyle = BIRDS[look.bird].body; ctx.fillRect(p.x - 3, p.y - 3, 6, 6); } ctx.globalAlpha = 1;
           CC.text(ctx, String(st.passed), W / 2, 50, { size: 40, color: '#f3e6cf' });
           if (humanBird && !st.started && !st.over) CC.text(ctx, 'Space to flap', W / 2, H / 2 + 40, { size: 18, color: '#ffb347' });
         },
+        destroy() { if (picker && picker.remove) picker.remove(); picker = null; },
       };
     },
   });
