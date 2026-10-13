@@ -3,10 +3,10 @@
   Cocktail Cabinet: the single page.
 
   @file  The only HTML page. It holds two screens that main.js swaps between:
-         - #menu : the title and a shelf where the seven game cards are built
+         - #menu : the title and a shelf where the eight game cards are built
          - #game : back/pause/restart buttons, the "which side" buttons, three score plates,
                    the frame with the drawing canvas, a side panel (chat, Go) and a banner
-  Scripts load in this order: vendored PeerJS, js/core.js, js/net.js, the seven games in
+  Scripts load in this order: vendored PeerJS, js/core.js, js/net.js, the eight games in
   js/games/, then js/main.js last (it needs every game registered first).
   There is no build step and no server code: this folder is published as-is.
 
@@ -17,8 +17,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Cocktail Cabinet — seven games, either side</title>
-<meta name="description" content="Seven arcade games on one cocktail cabinet. Play either side against the computer, or another person in a second browser.">
+<title>Cocktail Cabinet — eight games, either side</title>
+<meta name="description" content="Eight arcade games on one cocktail cabinet. Play either side against the computer, or another person in a second browser.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Chivo:wght@400;600;800&display=swap" rel="stylesheet">
@@ -32,7 +32,7 @@
   <section id="menu" class="screen">
     <header class="rail">
       <h1 class="marquee"><span>Cocktail</span><span>Cabinet</span></h1>
-      <p class="tagline">Seven games under one glass top. Sit on either side — the computer takes the other.</p>
+      <p class="tagline">Eight games under one glass top. Sit on either side — the computer takes the other.</p>
     </header>
     <div class="tabletop">
       <div id="deck" class="deck" role="list"></div>
@@ -86,6 +86,7 @@
 <script src="js/games/missile.js" defer></script>
 <script src="js/games/imitation.js" defer></script>
 <script src="js/games/go.js" defer></script>
+<script src="js/games/wheel.js" defer></script>
 <script src="js/main.js" defer></script>
 </body>
 </html>

@@ -74,7 +74,7 @@
     canvas.style.aspectRatio = `${size.w} / ${size.h}`;
     // keep the element's box at the game's aspect ratio so pointer coordinates map 1:1
     canvas.style.width = `min(100%, calc((100vh - 250px) * ${size.w / size.h}))`;
-    const layout = game.layout || 'canvas';
+    const layout = role.layout || game.layout || 'canvas'; // a side may override the game's layout
     if (layout === 'panel') { bezel.classList.add('with-panel'); panel.hidden = false; }
     if (layout === 'split') { bezel.classList.add('split'); panel.hidden = false; }
     CC.activeCanvasGame = layout !== 'panel';
@@ -92,14 +92,14 @@
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     const api = makeApi(game, role.id);
     api.hud('', '', '');
-    current = { game, role: role.id, inst: game.create(api) };
+    current = { game, role: role.id, layout, inst: game.create(api) };
     if (layout !== 'panel') canvas.focus({ preventScroll: true });
   }
 
   function route() {
     const id = location.hash.replace('#', '');
     const game = CC.games.find((g) => g.id === id);
-    if (!game) { stopCurrent(); gameEl.hidden = true; menu.hidden = false; document.title = 'Cocktail Cabinet — seven games, either side'; return; }
+    if (!game) { stopCurrent(); gameEl.hidden = true; menu.hidden = false; document.title = 'Cocktail Cabinet — eight games, either side'; return; }
     menu.hidden = true; gameEl.hidden = false; document.title = game.title + ' — Cocktail Cabinet';
     startGame(game, CC.store.get('role:' + game.id, game.roles[0].id));
     window.scrollTo(0, 0);
@@ -136,7 +136,7 @@
         while (acc >= STEP && steps < 6) { if (inst.update) inst.update(STEP); CC.input.clearFrame(); acc -= STEP; steps++; }
         if (steps === 6) acc = 0;
       }
-      if (inst.draw && current.game.layout !== 'panel') inst.draw(ctx);
+      if (inst.draw && current.layout !== 'panel') inst.draw(ctx);
     } catch (err) {
       console.error(err);
       paused = true;
