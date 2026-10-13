@@ -104,6 +104,7 @@ button { font: inherit; color: inherit; }
 .chip.primary { background: var(--amber); color: #2a1606; border-color: var(--amber); }
 .chip.primary:hover { background: #ffc671; }
 .chip:disabled { opacity: .45; cursor: default; }
+.chip[aria-pressed="true"] { background: var(--amber); color: #2a1606; border-color: var(--amber); }
 
 /* ---------- game ---------- */
 .topbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
